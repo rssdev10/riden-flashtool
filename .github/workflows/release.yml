@@ -20,27 +20,27 @@ jobs:
           - os_name: Linux-aarch64
             os: ubuntu-latest
             target: aarch64-unknown-linux-musl
-            bin: flash-linux-arm64
+            bin: riden-flashtool-linux-arm64
 
           - os_name: Linux-x86_64
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            bin: flash-linux-amd64
+            bin: riden-flashtool-linux-amd64
 
           - os_name: Windows-x86_64
             os: windows-latest
             target: x86_64-pc-windows-msvc
-            bin: flash-windows-amd64.exe
+            bin: riden-flashtool-windows-amd64.exe
 
           - os_name: macOS-x86_64
             os: macOS-latest
             target: x86_64-apple-darwin
-            bin: flash-darwin-amd64
+            bin: riden-flashtool-darwin-amd64
 
           - os_name: macOS-aarch64
             os: macOS-latest
             target: aarch64-apple-darwin
-            bin: flash-darwin-arm64
+            bin: riden-flashtool-darwin-arm64
         toolchain:
           - stable
     steps:
@@ -61,10 +61,10 @@ jobs:
           strip: true
 
       - name: Rename binary (linux and macos)
-        run: mv target/${{ matrix.platform.target }}/release/flash target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
+        run: mv target/${{ matrix.platform.target }}/release/riden-flashtool target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
         if: matrix.platform.os_name != 'Windows-x86_64'
       - name: Rename binary (windows)
-        run: mv target/${{ matrix.platform.target }}/release/flash.exe target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
+        run: mv target/${{ matrix.platform.target }}/release/riden-flashtool.exe target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
         if: matrix.platform.os_name == 'Windows-x86_64'
 
       - name: Create release zip archive (Linux and macOS)
