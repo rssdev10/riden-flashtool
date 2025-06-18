@@ -1,0 +1,37 @@
+# Rust specific ignores
+/target/
+/**/*.rs.bk
+**/*.rs.bk
+
+# Cargo
+/.cargo/
+# /Cargo.lock
+
+# macOS specific ignores
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# macOS resource forks
+._*
+
+# macOS Finder files
+.Spotlight-V100
+.Trashes
+
+# macOS temporary files
+*.swp
+*.swo
+*.tmp
+
+# Linux specific ignores
+*~
+.nfs*
+
+# General backup files
+*.bak
+*.old
+*.orig
+*.rej
+
+*.bin

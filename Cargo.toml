@@ -1,0 +1,17 @@
+[package]
+name = "riden-flashtool"
+version = "0.1.0"
+edition = "2021"
+description = "Riden RD60xx Firmware Flash Tool"
+
+[[bin]]
+name = "riden-flashtool"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "3.0", features = ["derive"] }
+colored = "2.0"
+indicatif = "0.17"
+serialport = "4.7.0"
+tabled = "0.12.2"
