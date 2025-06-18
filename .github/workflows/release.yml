@@ -96,3 +96,4 @@ jobs:
         with:
           name: ${{ matrix.platform.bin }}.zip
           path: target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.zip
+          retention-days: 1
