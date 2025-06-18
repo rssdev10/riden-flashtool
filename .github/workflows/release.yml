@@ -41,12 +41,12 @@ jobs:
             os: macOS-latest
             target: aarch64-apple-darwin
             bin: riden-flashtool-darwin-arm64
+
         toolchain:
           - stable
     steps:
       - uses: actions/checkout@v4
 
-      # Install dependencies for Linux platforms
       - name: Install dependencies (Linux)
         if: startsWith(matrix.platform.os_name, 'Linux')
         run: sudo apt-get update && sudo apt-get install -y libudev-dev
@@ -79,9 +79,20 @@ jobs:
 
       - name: Generate SHA-256
         run: shasum -a 256 target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.zip | cut -d ' ' -f 1 > target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.zip.sha256
+
+      # Only upload as GitHub Release asset if this is a release event
       - name: Release zip archive and SHA-256 checksum to GitHub
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           files: |
             target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.zip
             target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.zip.sha256
+
+      # For manual runs, upload as workflow artifact for download
+      - name: Upload artifact for manual download
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform.bin }}.zip
+          path: target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.zip
