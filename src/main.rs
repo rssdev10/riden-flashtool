@@ -26,17 +26,34 @@ use std::{
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
 
-const SUPPORTED_MODELS: [u16; 7] = [
-    60062, 60065, 60066, 60121, 60125, 60181, 60241
+const SUPPORTED_MODELS: [(u16, &str); 8] = [
+    (60062, "RD6006"),
+    (60065, "RD6006P"),
+    (60066, "RD6006W"),
+    (60121, "RD6012"),
+    (60125, "RD6012P"),
+    (60181, "RD6018"),
+    (60241, "RD6024"),
+    (60301, "RD6030"),
 ];
 const DEFAULT_BAUD_RATE: u32 = 115_200;
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(2);
+
+fn get_version_info() -> &'static str {
+    let models: Vec<&str> = SUPPORTED_MODELS.iter().map(|(_, name)| *name).collect();
+    let version_string = format!(
+        "{}\n\nSupported models: {}",
+        env!("CARGO_PKG_VERSION"),
+        models.join(", ")
+    );
+    Box::leak(version_string.into_boxed_str())
+}
 
 #[derive(Parser, Debug)]
 #[clap(
     name = "Riden RD60xx Firmware Flash Tool",
     about = "Firmware updater for Riden power supplies.",
-    version,
+    version = get_version_info(),
     long_about = None,
     after_help = "Repository: https://github.com/rssdev10/riden-flashtool"
 )]
@@ -60,6 +77,10 @@ struct Args {
     /// Serial port baud rate
     #[clap(short, long, default_value_t = DEFAULT_BAUD_RATE)]
     speed: u32,
+
+    /// Force operation on unsupported device models (WARNING: may permanently damage your device)
+    #[clap(long)]
+    force: bool,
 }
 
 struct RidenFirmwareUpdater {
@@ -250,9 +271,10 @@ impl RidenFirmwareUpdater {
 
         let model = u16::from_be_bytes([res[3], res[4]]);
         let fwver = res[10] as f32 / 100.0;
+        let model_name = RidenFirmwareUpdater::get_model_name(model);
         println!(
-            "Found device via Modbus: RD{} ({}) v{:.2}",
-            model / 10,
+            "Found device via Modbus: {} ({}) v{:.2}",
+            model_name,
             model,
             fwver
         );
@@ -300,12 +322,28 @@ impl RidenFirmwareUpdater {
     }
 
     fn is_supported_model(model: u16) -> bool {
-        SUPPORTED_MODELS.contains(&model)
+        SUPPORTED_MODELS.iter().any(|(code, _)| *code == model)
+    }
+
+    fn get_model_name(model: u16) -> &'static str {
+        SUPPORTED_MODELS
+            .iter()
+            .find(|(code, _)| *code == model)
+            .map(|(_, name)| *name)
+            .unwrap_or_else(|| {
+                let default_name = format!("RD{}", model / 10);
+                Box::leak(default_name.into_boxed_str())
+            })
     }
 }
 
 fn main() -> io::Result<()> {
     let args = Args::parse();
+
+    println!(
+        "Riden RD60xx Firmware Flash Tool v{}",
+        env!("CARGO_PKG_VERSION")
+    );
 
     if args.list {
         return list_serial_ports();
@@ -339,17 +377,38 @@ fn main() -> io::Result<()> {
     match updater.device_info() {
         Ok((model, fwver, snum)) => {
             println!("Device information from bootloader:");
-            println!("    Model: RD{} ({})", model / 10, model);
+            let model_name = RidenFirmwareUpdater::get_model_name(model);
+            println!("    Model: {} ({})", model_name, model);
             println!(" Firmware: v{:.2}", fwver);
             println!("      S/N: {:08}", snum);
 
             if !RidenFirmwareUpdater::is_supported_model(model) {
-                let msg = format!("Unsupported device model: {}", model);
-                eprintln!("{}", msg);
-                return Err(io::Error::new(
-                    io::ErrorKind::Unsupported,
-                    msg,
-                ));
+                if args.force {
+                    eprintln!(
+                        "⚠️  WARNING: Device model {} ({}) is not officially supported!",
+                        model_name, model
+                    );
+                    eprintln!("⚠️  Proceeding with --force flag. This operation may permanently damage your device!");
+                    eprintln!("⚠️  Continue at your own risk. No warranty or support is provided.");
+                } else {
+                    eprintln!(
+                        "❌ Error: Device model {} ({}) is not supported by this tool.",
+                        model_name, model
+                    );
+                    eprintln!(
+                        "   Supported models: {}",
+                        SUPPORTED_MODELS
+                            .iter()
+                            .map(|(_, name)| *name)
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    );
+                    eprintln!("   Use --force to bypass this check (WARNING: may permanently damage your device)");
+                    return Err(io::Error::new(
+                        io::ErrorKind::Unsupported,
+                        format!("Unsupported device model: {} ({})", model_name, model),
+                    ));
+                }
             }
         }
         Err(e) => {
